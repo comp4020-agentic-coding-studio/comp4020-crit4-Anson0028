@@ -155,6 +155,33 @@ sees one commit doing two jobs and cannot tell which part was the insight.
 Prefix the subject with the area — `main:`, `styles.css:`, `spec:`,
 `CLAUDE.md:`, `scripts:` — so a scan of the log reads as a sequence of moves.
 
+## The instrument sounds only while it is being played
+
+Silence until the first press. Sound for exactly as long as a press is held.
+Natural decay when it is released, and silence again when nothing is held.
+The page never plays by itself, and never carries on after the player stops.
+
+That is the autoplay policy and the brief's own line — the opening screen
+invites the first sound, nothing sounds before it — but it is also the
+difference between an instrument and a recording. A page that keeps going on
+its own is something you watch.
+
+### Why one press has to produce more than one note
+
+Three versions of this instrument were percussion: a membrane, a kit, a
+djembe. Each was measurably better than the last — the djembe's strokes are
+7.2x apart in spectral centre where the first drum's whole range was 1.45x —
+and all three failed for the same reason, which no measurement was ever going
+to report. A struck drum is a one-shot: click, sound, silence. One mouse
+pointer moving at human speed cannot lay down enough one-shots to become
+music, so the instrument was never bad, it was just unplayable by the person
+holding a mouse.
+
+So the rule is: **a single held press must produce music, not a note.** What
+the press starts is a line that keeps moving while it is held and changes as
+the hand moves. The player is not triggering events; they are steering
+something that is already in motion because they are holding it in motion.
+
 ## This week: my ear is the harness
 
 The brief says it outright — an agent can build a synth and cannot hear the
