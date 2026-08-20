@@ -42,14 +42,17 @@ const VIEWPORTS = [
 // then that assertion reports itself as unchecked rather than passing — a
 // check that silently skips its own subject is the failure this whole file is
 // about.
-const CANVAS_SELECTOR: string | null = null;
+const CANVAS_SELECTOR: string | null = '[data-testid="drum-head"]';
 
-// Likewise: the phone has no keyboard, so "can this be played at all here" is
-// a question only a finger can answer. In assignment 1 this rule sat in
-// CLAUDE.md unimplemented for the entire build and the phone viewport was
-// unplayable. Set this to a function that strikes the instrument and returns
-// whether it sounded, and the stub below turns into a real assertion.
-const TOUCH_PLAYS: null = null;
+// The phone has no keyboard, so "can this be played at all here" is a question
+// only a finger can answer. In assignment 1 the touch rule sat in CLAUDE.md
+// unimplemented for the entire build and the phone viewport was unplayable,
+// while fifty tests looked elsewhere. This is the sensor that would have said
+// so: tap the drum head, and the strike counter in the state mirror has to
+// move. It cannot hear the sound — nothing automated can — but it can prove
+// that a finger reaches the thing that makes it.
+const TOUCH_TARGET = '[data-testid="drum-head"]';
+const TOUCH_STATE = '[data-testid="drum-state"]';
 
 function htmlFiles(dir: string = DIST): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -225,10 +228,25 @@ async function main(): Promise<void> {
 
           // 6. The phone has no keyboard, so a finger is the only way in.
           if (viewport.hasTouch) {
-            if (TOUCH_PLAYS === null) {
-              unchecked++;
-              console.log(`· ${label}: touch playability UNCHECKED — wire TOUCH_PLAYS once the instrument sounds`);
+            const head = await page.locator(TOUCH_TARGET).boundingBox();
+            if (!head) {
+              console.error(`✗ ${label}: nothing to strike — "${TOUCH_TARGET}" matched no box`);
+              failed = true;
+              continue;
             }
+            const before = Number(
+              (await page.locator(TOUCH_STATE).getAttribute("data-strikes")) ?? "-1",
+            );
+            await page.touchscreen.tap(head.x + head.width * 0.7, head.y + head.height / 2);
+            await page.waitForTimeout(120);
+            const after = Number((await page.locator(TOUCH_STATE).getAttribute("data-strikes")) ?? "-1");
+            if (!(after > before)) {
+              console.error(`✗ ${label}: a tap on the drum head struck nothing (${before} -> ${after})`);
+              reportErrors();
+              failed = true;
+              continue;
+            }
+            console.log(`✓ ${label}: a finger can strike the drum`);
           }
         } finally {
           await page.close();

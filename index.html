@@ -3,17 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>COMP4020 prototype</title>
+    <title>Where you hit it</title>
     <meta
       name="description"
-      content="Replace this with one sentence saying what this page is. A search result and a link preview both show it."
+      content="A drum head in the browser. The middle is a thump, the rim is a ring, and the sound is built live from the membrane's own modes."
     />
 
-    <!--
-      The link-preview card: public/card.png, 1200x630 --- replace it. The URL
-      resolves against this page, like any link. No og:title/og:description:
-      scrapers fall back to the <title> and description above.
-    -->
+    <!-- The link-preview card: public/card.png, 1200x630. Still the starter's
+         placeholder image — replace it before the cutoff. -->
     <meta property="og:type" content="website" />
     <meta property="og:image" content="./card.png" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -21,17 +18,13 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header>
-      <nav aria-label="Primary">
-        <a href="./">Home</a>
-      </nav>
-    </header>
+    <nav aria-label="Primary">
+      <a class="skip-link" href="#drum">Skip to the drum</a>
+    </nav>
     <main>
-      <h1>COMP4020 prototype</h1>
-      <p data-testid="intro">
-        Replace this with your prototype. This week's brief is on the course website;
-        <code>spec/README.md</code> explains how the checks in this repo relate to it.
-      </p>
+      <h1>Where you hit it</h1>
+      <p class="lede">One drum. The middle is a thump, the rim is a ring, and everywhere between is its own sound.</p>
+      <div id="drum"></div>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>
