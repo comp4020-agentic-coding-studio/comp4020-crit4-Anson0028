@@ -94,7 +94,7 @@ const grace: Piece = (() => {
 })();
 
 // ---------------------------------------------------------------------------
-// 2. 茉莉花 / Jasmine Flower (Jiangsu, Qing dynasty). Two phrases that are
+// 2. Jasmine Flower (Mo Li Hua, Jiangsu, Qing dynasty). Two phrases that are
 //    almost the same, which is the whole charm of it — and a second chance to
 //    hear one hand height against another without inventing an exercise.
 const JASMINE_A: readonly Step[] = [
@@ -115,7 +115,7 @@ const jasmine: Piece = (() => {
   const rest = line(JASMINE_B, { beat, start: again.end, position: 0.82, force: 0.85 });
   return {
     id: "jasmine",
-    title: "茉莉花 · Jasmine Flower",
+    title: "Jasmine Flower",
     about: "A Jiangsu folk song, pentatonic to the last note — which is why it fits these strings without a single accidental.",
     notes: [...first.notes, ...again.notes, ...rest.notes],
   };
