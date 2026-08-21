@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PIECES, durationOf } from "../pieces";
+import { GRACE_PHRASE_INDICES, PIECES, durationOf } from "../pieces";
 import { STRING_COUNT } from "../harp";
 import { overtoneRatio } from "../string";
 
@@ -30,9 +30,13 @@ describe("the three demo pieces", () => {
   });
 
   it("is short enough that nobody has to sit through it", () => {
+    // The cap was 8 s when the pieces were exercises. A tune somebody
+    // recognises needs a whole phrase, and none of these gets past twelve
+    // seconds — which is the honest reason the number moved, rather than the
+    // number moving to let a failure through.
     for (const piece of PIECES) {
       expect(durationOf(piece)).toBeGreaterThan(1);
-      expect(durationOf(piece)).toBeLessThan(8);
+      expect(durationOf(piece)).toBeLessThan(12);
     }
   });
 
@@ -42,14 +46,15 @@ describe("the three demo pieces", () => {
   });
 
   it("makes the pluck position audible in the piece that promises to", () => {
-    // "The same phrase, twice" claims the two halves are the same notes in a
-    // different voice. If the two halves are not literally the same strings
+    // "Amazing Grace" claims its opening line is played twice in a different
+    // voice. If the two halves are not literally the same strings
     // in the same order, the claim is a lie; if their sound does not differ,
     // the piece demonstrates nothing.
-    const piece = PIECES.find((p) => p.id === "position")!;
-    const half = 6;
+    const piece = PIECES.find((p) => p.id === "grace")!;
+    const half = GRACE_PHRASE_INDICES.length;
     const first = piece.notes.slice(0, half);
     const second = piece.notes.slice(half, half * 2);
+    expect(first.map((n) => n.index)).toEqual([...GRACE_PHRASE_INDICES]);
     expect(second.map((n) => n.index)).toEqual(first.map((n) => n.index));
     const voice = (n: { position: number }) => overtoneRatio(n.position);
     for (let i = 0; i < half; i++) {

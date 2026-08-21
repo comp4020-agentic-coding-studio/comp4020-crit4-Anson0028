@@ -1,7 +1,14 @@
-// Three things to press before you know what the instrument does. A stranger
-// who drags a hand across the strings gets a nice noise and learns nothing
-// about the one control that matters, so each piece exists to make one fact
-// audible and then hand the strings back.
+// Three tunes to press before you know what the instrument does. A stranger
+// who drags a hand across eleven strings gets a pleasant noise and learns
+// nothing about the pluck position, which is the only control here worth
+// learning.
+//
+// All three are traditional and out of copyright, and all three are
+// pentatonic — which is not a coincidence but the reason they fit. The
+// strings are tuned to a pentatonic scale so that a stranger cannot land on a
+// wrong note, and the tunes people the world over already know by heart turn
+// out to live in exactly that scale. A harp with no wrong notes can play
+// Amazing Grace note for note and never leave home.
 //
 // Pure data and pure functions: no audio, no canvas, no clock. What a piece
 // claims — that it stays on the instrument, that it really does contrast the
@@ -26,85 +33,139 @@ export type Piece = {
   notes: Note[];
 };
 
-const MIDDLE = 0.5;
-const TABLE = 0.9; // by the soundboard
-const NECK = 0.1;
+// The strings, as scale degrees. 0 is the low A; the rest are the pentatonic
+// steps above it. Naming them is how a tune stays readable as a tune.
+const A3 = 0;
+const C4 = 1;
+const D4 = 2;
+const E4 = 3;
+const G4 = 4;
+const A4 = 5;
+const C5 = 6;
+const D5 = 7;
+const E5 = 8;
+const G5 = 9;
+const A5 = 10;
 
-function phrase(steps: number[], start: number, gap: number, position: number, force: number): Note[] {
-  return steps.map((index, i) => ({ at: start + i * gap, index, position, force }));
+/** A rest. */
+const _ = -1;
+
+type Step = readonly [index: number, beats: number];
+
+type LineOptions = { beat: number; start: number; position: number; force?: number };
+
+/** Lay a melody out in time. Returns the notes and where the line ends, so the
+ *  next line can start there without a magic number. */
+function line(steps: readonly Step[], o: LineOptions): { notes: Note[]; end: number } {
+  const notes: Note[] = [];
+  let t = o.start;
+  for (const [index, beats] of steps) {
+    if (index !== _) notes.push({ at: t, index, position: o.position, force: o.force ?? 0.85 });
+    t += beats * o.beat;
+  }
+  return { notes, end: t };
 }
 
-// 1. The same six notes twice over, moving only the hand's height. Nothing
-//    else changes: same strings, same order, same speed. If the second half
-//    does not sound like a different instrument then the pluck position is
-//    not doing its job, and three earlier instruments were rejected this week
-//    for exactly that.
-const sameNotesTwice: Piece = {
-  id: "position",
-  title: "The same phrase, twice",
-  about: "Identical notes. The only difference is how high up the string the hand is: the middle first, then down by the soundboard.",
-  notes: [
-    ...phrase([0, 2, 4, 5, 4, 2], 0, 0.36, MIDDLE, 0.9),
-    ...phrase([0, 2, 4, 5, 4, 2], 2.5, 0.36, TABLE, 0.9),
-    { at: 4.8, index: 0, position: MIDDLE, force: 0.8 },
-    { at: 4.8, index: 5, position: TABLE, force: 0.8 },
-  ],
-};
+// ---------------------------------------------------------------------------
+// 1. Amazing Grace (New Britain, 1835). Its first phrase is repeated, and the
+//    repeat is played by the soundboard — so the piece that shows off the
+//    pluck position does it inside a tune everybody knows, with the same
+//    notes in the same order, rather than in an exercise nobody would listen
+//    to twice.
+const GRACE_PHRASE: readonly Step[] = [
+  [G4, 1],
+  [C5, 2], [E5, 1],
+  [C5, 2], [E5, 1],
+  [D5, 3],
+  [C5, 2], [A4, 1],
+  [G4, 3],
+];
 
-// 2. What a hand does when it just falls across the strings, which is the
-//    first thing anybody tries. Up, down, and then up again with the hand
-//    sliding from the neck to the board, so the sweep brightens as it climbs.
-const sweep: Piece = {
-  id: "sweep",
-  title: "A hand across the strings",
-  about: "A glissando up and back, then a third one where the hand slides down towards the soundboard as it goes.",
-  notes: [
-    ...Array.from({ length: STRING_COUNT }, (_, i) => ({ at: i * 0.06, index: i, position: 0.42, force: 0.75 })),
-    ...Array.from({ length: STRING_COUNT }, (_, i) => ({
-      at: 0.95 + i * 0.055,
-      index: STRING_COUNT - 1 - i,
-      position: 0.42,
-      force: 0.7,
-    })),
-    ...Array.from({ length: STRING_COUNT }, (_, i) => ({
-      at: 1.9 + i * 0.075,
-      index: i,
-      position: NECK + (i / (STRING_COUNT - 1)) * (TABLE - NECK),
-      force: 0.85,
-    })),
-    { at: 3.0, index: 10, position: TABLE, force: 1 },
-  ],
-};
+const grace: Piece = (() => {
+  const beat = 0.36;
+  const near = line(GRACE_PHRASE, { beat, start: 0, position: 0.5, force: 0.85 });
+  const far = line(GRACE_PHRASE, { beat, start: near.end + beat, position: 0.9, force: 0.85 });
+  return {
+    id: "grace",
+    title: "Amazing Grace",
+    about: "The opening line twice over — the same notes in the same order, plucked at the middle of the strings and then down by the soundboard.",
+    notes: [...near.notes, ...far.notes],
+  };
+})();
 
-// 3. An actual tune, so the answer to "what is this for" is a piece of music
-//    and not a demonstration. Melody up top, a low note under each bar, and
-//    the melody drifts up the string as it goes so the phrase opens out.
-const tune: Piece = {
-  id: "tune",
-  title: "Something to take over",
-  about: "A short piece in the strings' own scale. Play along on top of it, or press it again when it stops.",
-  notes: (() => {
-    const out: Note[] = [];
-    const beat = 0.3;
-    const melody = [7, 8, 9, 8, 7, 5, 7, 0, 5, 7, 8, 7, 5, 4, 5, 0];
-    melody.forEach((index, i) => {
-      const t = i * beat;
-      // The hand climbs from the middle towards the board across the tune, so
-      // the second half is brighter than the first without a single note
-      // changing.
-      const position = MIDDLE + (i / (melody.length - 1)) * (TABLE - MIDDLE);
-      out.push({ at: t, index, position, force: 0.85 });
-      if (i % 4 === 0) out.push({ at: t, index: i % 8 === 0 ? 0 : 2, position: 0.62, force: 0.6 });
-    });
-    out.push({ at: melody.length * beat + 0.1, index: 0, position: 0.62, force: 0.8 });
-    out.push({ at: melody.length * beat + 0.1, index: 5, position: 0.55, force: 0.7 });
-    return out.sort((a, b) => a.at - b.at);
-  })(),
-};
+// ---------------------------------------------------------------------------
+// 2. 茉莉花 / Jasmine Flower (Jiangsu, Qing dynasty). Two phrases that are
+//    almost the same, which is the whole charm of it — and a second chance to
+//    hear one hand height against another without inventing an exercise.
+const JASMINE_A: readonly Step[] = [
+  [E4, 1], [E4, 1], [G4, 1], [A4, 1],
+  [G4, 1], [E4, 1], [G4, 2],
+];
+const JASMINE_B: readonly Step[] = [
+  [A4, 1], [A4, 1], [A4, 1], [G4, 1],
+  [A4, 1], [C5, 1], [A4, 1], [G4, 1],
+  [E4, 1], [G4, 1], [E4, 1], [D4, 1],
+  [C4, 4],
+];
 
-export const PIECES: readonly Piece[] = [sameNotesTwice, sweep, tune];
+const jasmine: Piece = (() => {
+  const beat = 0.3;
+  const first = line(JASMINE_A, { beat, start: 0, position: 0.45, force: 0.8 });
+  const again = line(JASMINE_A, { beat, start: first.end, position: 0.72, force: 0.8 });
+  const rest = line(JASMINE_B, { beat, start: again.end, position: 0.82, force: 0.85 });
+  return {
+    id: "jasmine",
+    title: "茉莉花 · Jasmine Flower",
+    about: "A Jiangsu folk song, pentatonic to the last note — which is why it fits these strings without a single accidental.",
+    notes: [...first.notes, ...again.notes, ...rest.notes],
+  };
+})();
 
-/** How long a piece runs, in seconds — the last note plus its ring. */
+// ---------------------------------------------------------------------------
+// 3. Auld Lang Syne (traditional, Burns 1788). The hand climbs towards the
+//    board across the phrase, so it opens out without a single note changing.
+const AULD: readonly Step[] = [
+  [G4, 1],
+  [C5, 3], [C5, 1],
+  [C5, 2], [E5, 1],
+  [D5, 2], [C5, 1],
+  [D5, 2], [E5, 1],
+  [C5, 2], [C5, 1],
+  [E5, 2], [G5, 1],
+  [A5, 4],
+];
+
+const auld: Piece = (() => {
+  const beat = 0.3;
+  const notes = AULD.reduce<{ notes: Note[]; t: number; i: number }>(
+    (acc, [index, beats]) => {
+      const climb = 0.5 + (acc.i / (AULD.length - 1)) * 0.38;
+      acc.notes.push({ at: acc.t, index, position: climb, force: 0.85 });
+      // A low string under the start of each phrase, so there is a bass to
+      // play over rather than a bare melody.
+      if (acc.i === 1 || acc.i === 7) acc.notes.push({ at: acc.t, index: A3, position: 0.6, force: 0.55 });
+      return { notes: acc.notes, t: acc.t + beats * beat, i: acc.i + 1 };
+    },
+    { notes: [], t: 0, i: 0 },
+  ).notes;
+  return {
+    id: "auld",
+    title: "Auld Lang Syne",
+    about: "The one everybody already knows, with the hand walking down towards the soundboard as it goes.",
+    notes: notes.sort((a, b) => a.at - b.at),
+  };
+})();
+
+export const PIECES: readonly Piece[] = [grace, jasmine, auld];
+
+/** How long a piece runs, in seconds — up to its last note. */
 export function durationOf(piece: Piece): number {
   return Math.max(...piece.notes.map((n) => n.at));
 }
+
+/** The repeated phrase in "Amazing Grace", as string indices. The point of
+ *  that piece is that the two halves are the same notes; this is what the
+ *  test compares them against. */
+export const GRACE_PHRASE_INDICES: readonly number[] = GRACE_PHRASE.map(([i]) => i).filter((i) => i !== _);
+
+export { STRING_COUNT };
