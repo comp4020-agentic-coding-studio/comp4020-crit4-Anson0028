@@ -35,7 +35,7 @@ body {
 }
 
 main {
-  max-width: 60rem;
+  max-width: 68rem;
   margin: 0 auto;
   padding: 1.25rem 1rem 2rem;
 }
@@ -59,15 +59,15 @@ h1 {
   gap: 0.6rem;
 }
 
-canvas[data-testid="drum-head"] {
+canvas[data-testid="harp"] {
   display: block;
-  width: min(100%, 34rem);
-  aspect-ratio: 1;
+  width: 100%;
+  aspect-ratio: 3 / 2;
   touch-action: none; /* a strike must not scroll the page out from under it */
   cursor: pointer;
 }
 
-canvas[data-testid="drum-head"]:focus-visible {
+canvas[data-testid="harp"]:focus-visible {
   outline: 3px solid var(--text);
   outline-offset: 4px;
 }
