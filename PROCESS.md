@@ -1,85 +1,31 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it. Markers read this file and follow its citations; they don't
-trawl the repo for evidence you didn't point at, so if a moment mattered, cite
-it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+A harp of eleven strings, flat on. Which string you pluck is the note; where
+along it you pluck is the sound. That second control is the whole prototype:
+an ideal string plucked at `p` gives harmonic `n` an amplitude of
+`sin(nπp)/n`, so the midpoint silences every even harmonic and the ends bring
+them all back. It is derived, not a filter sweep. The strings are pentatonic,
+so there is nothing to play wrong, and three public-domain tunes are scheduled
+through the same synthesis rather than played back.
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+**My ear failed four instruments that every measurement had passed.** A drum,
+a kit, a djembe and an arpeggiator all measured fine and all sounded like one
+note wherever you hit them, and so did the first harp. Rather than tune it
+again I made the ear's complaint into two assertions and committed them red
+([`f5152c8`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-Anson0028/commit/f5152c8)). They found two real faults: I was
+synthesising the string's displacement, where the ear hears the force on the
+bridge — one factor of `n` brighter, which moved the overtone stack from
+18 dB under the fundamental to 8 dB over it — and `sin(nπp)` is symmetric, so
+the top and bottom halves of every string were the same sound
+([`6fe7dc2`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-Anson0028/commit/6fe7dc2)).
 
-1. **what happened** --- the problem, or the thing that went wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
-
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** --- the standards and checks your work has to satisfy
---- rather than in a retry: a rule added to `CLAUDE.md`, a check wired up, an
-attempt thrown away. Retrying until it passes is the routine case, and changing
-what the work runs against is the skilled one.
-
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
-
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
-
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
-
-> the prompt, verbatim
-
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
-
-### A worked moment, for shape
-
-Delete this section along with the rest of the boilerplate --- it's here to show
-the four jobs in one paragraph, not to be imitated in content.
-
-> The date formatter kept coming back with `toLocaleDateString()` and no locale
-> argument, so the same build rendered differently on my machine and in CI. I'd
-> already re-prompted it twice, which fixed the line but not the habit, so the
-> third time I put the rule in `CLAUDE.md` instead
-> ([`3f9ac21`](https://github.com/YOUR-ORG/YOUR-REPO/commit/3f9ac21)) and added
-> a spec test that fails on a bare `toLocaleDateString`. That's what told me it
-> had actually taken: the test went red against the old code and green against
-> the new, and the next two features it wrote passed it without prompting
-> ([`3f9ac21...b7e0d14`](https://github.com/YOUR-ORG/YOUR-REPO/compare/3f9ac21...b7e0d14)).
-
-## Before you ship
-
-`pnpm check:evidence` verifies your citations resolve to real commits, that a
-reflection entry the marker reads is in `reflections/`, and that your
-`CLAUDE.md` is there --- before a marker ever opens the file. It checks that
-your map is traceable, not that it is good: the marker judges whether your
-small, deliberately chosen set of moments shows real judgement and reflection. A
-green check is not a substitute for that curation.
-
-Images aren't checked: whether one renders is visible the moment you look. Open
-this file on GitHub and look at it before you ship.
+**A sentence in `CLAUDE.md` had been decoration for four weeks.** It said the
+pointer-to-sound gap here is measured, not assumed. Nothing measured it. The
+sensor I wrote passed at 27 ms — until I read the parts and saw 24 of them
+belonged to the CI machine's audio device, so the assertion was grading a
+sound card. The ceiling now sits on the 2 ms the page owns
+([`dee0a03...96c16bd`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-Anson0028/compare/dee0a03...96c16bd)).
