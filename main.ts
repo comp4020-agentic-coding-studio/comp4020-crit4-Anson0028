@@ -122,6 +122,7 @@ if (mount) {
     const output = audio.outputLatencyS * 1000;
     const total = handling + scheduling + output;
     mirror.dataset.latencyMs = total.toFixed(2);
+    mirror.dataset.latencyPageMs = (handling + scheduling).toFixed(2);
     mirror.dataset.latencyParts =
       `handling ${handling.toFixed(1)} + scheduling ${scheduling.toFixed(1)} + output ${output.toFixed(1)} ms`;
   }

@@ -343,11 +343,19 @@ async function main(): Promise<void> {
           //    the pointer-to-sound gap is measured rather than assumed, and
           //    until now nothing measured it — the claim was decoration.
           //
-          //    The page reports the whole gap it can see: the time from the
-          //    pointer event to the code that handles it, the lead the note is
-          //    scheduled with, and the output latency the AudioContext admits
-          //    to. Under about 30 ms a plucked attack reads as caused by the
-          //    hand; past it the sound arrives as a separate event.
+          //    The page reports the whole gap it can see, in three parts: the
+          //    time from the pointer event to the code that handles it, the
+          //    lead the note is scheduled with, and the output latency the
+          //    AudioContext admits to.
+          //
+          //    The ceiling is on the first two only. My first version put 30
+          //    ms across the total and passed at 27, but 24 of those 27 were
+          //    headless Chromium's dummy output device — so the assertion was
+          //    grading the CI machine's sound card and would have gone red for
+          //    something I cannot fix and green while I made the page slower.
+          //    Eight milliseconds across the part the page owns catches my
+          //    regressions; the total is printed beside it because that is
+          //    what the player's ear actually gets.
           {
             const box = await page.locator(CANVAS_SELECTOR!).boundingBox();
             if (!box) {
@@ -364,14 +372,21 @@ async function main(): Promise<void> {
                 );
               }
               const parts = (await page.locator(TOUCH_STATE).getAttribute("data-latency-parts")) ?? "?";
-              if (!Number.isFinite(worst)) {
+              const mine = Number((await page.locator(TOUCH_STATE).getAttribute("data-latency-page-ms")) ?? NaN);
+              if (!Number.isFinite(worst) || !Number.isFinite(mine)) {
                 console.error(`✗ ${label}: the page reports no pointer-to-sound latency at all`);
                 failed = true;
-              } else if (worst > 30) {
-                console.error(`✗ ${label}: pointer to sound took ${worst.toFixed(1)} ms (${parts}) — over the 30 ms an attack can hide in`);
+              } else if (mine > 8) {
+                console.error(
+                  `✗ ${label}: the page spent ${mine.toFixed(1)} ms of its own between hand and sound ` +
+                    `(total ${worst.toFixed(1)} ms: ${parts})`,
+                );
                 failed = true;
               } else {
-                console.log(`✓ ${label}: pointer to sound ${worst.toFixed(1)} ms, worst of five (${parts})`);
+                console.log(
+                  `✓ ${label}: the page's own share of the gap is ${mine.toFixed(1)} ms ` +
+                    `(total ${worst.toFixed(1)} ms: ${parts})`,
+                );
               }
             }
           }
