@@ -1,3 +1,4 @@
+import { overtoneRatio } from "../string";
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { HARMONICS, brightness, evenEnergy, harmonicAmplitude, partialsFor, shapeAt } from "../string";
@@ -134,5 +135,38 @@ describe("there is no wrong string to land on", () => {
   it("finds a string only when the hand is near one", () => {
     expect(nearestString(STRINGS[3].x)?.index).toBe(3);
     expect(nearestString(0.5 * (STRINGS[3].x + STRINGS[4].x), 0.01)).toBeNull();
+  });
+});
+
+// Added after playing it. The measurements below all passed while the
+// instrument sounded, to the player, like one note.
+describe("what actually reaches the ear", () => {
+  it("has overtones loud enough for their absence to be audible", () => {
+    // The ear hears the force the string exerts on the bridge, not the
+    // string's displacement — and that is a different spectrum, one factor of
+    // n brighter. Under the displacement spectrum the whole overtone stack
+    // sits 3-18 dB below the fundamental, so every pluck is very nearly a
+    // sine wave and removing the even harmonics removes almost nothing. The
+    // holes are real; there was just nothing in them.
+    const nearEnd = overtoneRatio(0.06);
+    expect(nearEnd).toBeGreaterThan(1);
+    // ...and the middle must still be the hollow end of the range.
+    expect(overtoneRatio(0.5)).toBeLessThan(nearEnd / 2);
+  });
+
+  it("does not give the two halves of a string the same sound", () => {
+    // sin(nπp) is symmetric about the midpoint, so p and 1-p are the same
+    // spectrum to the last digit. A hand travelling down a string therefore
+    // hears hollow-bright-hollow-bright: half an instrument, played twice.
+    // A real harp has a soundboard at one end and nothing but a tuning pin at
+    // the other, and harpists play "près de la table" precisely because that
+    // end sounds different.
+    for (const p of [0.15, 0.3]) {
+      const near = partialsFor(220, p);
+      const far = partialsFor(220, 1 - p);
+      const ring = (ps: { decay: number }[]) => Math.max(...ps.map((q) => q.decay));
+      const difference = Math.abs(ring(near) - ring(far)) / ring(far);
+      expect(difference).toBeGreaterThan(0.15);
+    }
   });
 });
