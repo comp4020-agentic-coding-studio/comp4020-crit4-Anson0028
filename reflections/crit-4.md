@@ -1,26 +1,27 @@
 # Crit 4 — An instrument
 
-<!-- DRAFT written by Claude from what actually happened this week. Anson:
-     replace this with your own words before shipping — the marker is reading
-     for your voice, not mine. The facts below are checked and safe to keep. -->
+**The breakthrough.**
 
-**The breakthrough.** It was the moment I stopped trusting a green check and
-started trusting my ear, and then made my ear into a check. I threw away four
-instruments this week — a drum, a five-piece kit, a djembe, an arpeggiator —
-and every one of them passed everything I had written. They just sounded like
-one note no matter where you hit them. The fifth time it happened, on the
-harp, I didn't tune it again. I wrote down what my ear was complaining about
-as two assertions, committed them red, and let them tell me why. They found
-something I would never have guessed: I was synthesising the wrong spectrum
-entirely. The ear hears the force a string pulls on the bridge, not the
-string's own displacement, and the difference is one factor of n — enough that
-my carefully derived harmonic holes had nothing in them to remove. A feeling I
-couldn't articulate turned out to be a physics error I could measure.
+I binned four instruments this week before the harp. A drum, then a five-piece
+kit, then a djembe, then a hold-to-play arpeggiator. Every one of them passed
+every check I had written, and every one of them sounded the same no matter
+where you hit it. I kept saying "it's not different enough" without being able
+to say what I meant.
 
-**What it changed.** I used to treat tests as something you write after you
-know you're right. This week they were how I found out what was wrong with
-something I could only feel. I also stopped believing my own documentation:
-CLAUDE.md had claimed since the first commit that latency here was measured
-rather than assumed, and it was a sentence I had written and never backed. I
-want to be the kind of developer whose harness can embarrass him — because
-mine did, four times, and the work is better for it.
+The fifth time it happened I stopped re-tuning it and wrote the complaint down
+as two tests instead, and committed them while they were still failing. That
+was the turn. They found something I would never have found by ear alone: I
+was generating the wrong spectrum. What you hear from a string is the force it
+pulls on the bridge, not the string's own shape, and that difference is a
+factor of n. My harmonic maths was right and there was nothing in it to hear.
+The second test found that the top half of every string sounded identical to
+the bottom half, which is why dragging down one felt like nothing was
+happening.
+
+**What it changed.**
+
+I used to write tests to confirm I was already right. This week they were the
+only way I got at something I could only feel. The other thing that stuck: my
+own CLAUDE.md said latency here was measured and not assumed, and I had never
+measured it once. I'd been quoting myself. I'd rather work somewhere my notes
+can be caught lying, and this week mine were, four times.
