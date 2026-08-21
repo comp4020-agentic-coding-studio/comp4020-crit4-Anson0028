@@ -212,7 +212,14 @@ if (mount) {
     // is a video.
     stopPiece();
     canvas.focus();
-    canvas.setPointerCapture(e.pointerId);
+    // A pointer the browser has forgotten — one that was captured and then
+    // released by a resize, or a synthesised event — throws here rather than
+    // failing quietly, and would take the whole pluck down with it.
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      // Not being able to follow the finger off the canvas is survivable.
+    }
     const at = local(e);
     const string = nearestString(at.x);
     hands.set(e.pointerId, { ...at, at: e.timeStamp, locked: string ? { index: string.index, x: string.x } : null });

@@ -390,6 +390,52 @@ async function main(): Promise<void> {
               }
             }
           }
+
+          // 10. Markers resize the window mid-interaction. A canvas instrument
+          //     is the worst case for that: the drawing buffer, the CSS box
+          //     and the pointer maths all have to agree again afterwards, and
+          //     a string that is ringing has to survive the change.
+          {
+            const box = await page.locator(CANVAS_SELECTOR!).boundingBox();
+            if (!box) {
+              console.error(`✗ ${label}: no canvas to resize around`);
+              failed = true;
+            } else {
+              await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.4);
+              await page.setViewportSize({ width: Math.round(viewport.width * 0.7), height: viewport.height });
+              await page.waitForTimeout(150);
+              const before = Number((await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1");
+              const after = await page.locator(CANVAS_SELECTOR!).boundingBox();
+              // A real pointer, not a synthesised PointerEvent: the first
+              // version of this dispatched its own event with a made-up
+              // pointerId, setPointerCapture threw NotFoundError for a pointer
+              // the browser had never seen, and the check went red against a
+              // page that was fine. The bug was in the sensor, and a sensor
+              // that cries wolf gets ignored, which is worse than not having
+              // it. (The throw is guarded now anyway — see main.ts.)
+              if (after) await page.mouse.click(after.x + after.width * 0.7, after.y + after.height * 0.4);
+              const now = Number((await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1");
+              const dpr = await page.evaluate(() => window.devicePixelRatio);
+              const buffer = await page.evaluate(() => {
+                const el = document.querySelector<HTMLCanvasElement>('[data-testid="harp"]')!;
+                return { w: el.width, h: el.height };
+              });
+              await page.setViewportSize({ width: viewport.width, height: viewport.height });
+              const drift = after ? Math.abs(buffer.w - after.width * dpr) : Infinity;
+              if (now <= before) {
+                console.error(`✗ ${label}: the harp stopped answering after a resize mid-interaction`);
+                failed = true;
+              } else if (drift > 2) {
+                console.error(
+                  `✗ ${label}: after a resize the canvas buffer is ${buffer.w}px for a ${after!.width}px box ` +
+                    `at dpr ${dpr} — off by ${drift.toFixed(1)}`,
+                );
+                failed = true;
+              } else {
+                console.log(`✓ ${label}: a resize mid-interaction leaves the harp playable and in register`);
+              }
+            }
+          }
         } finally {
           await page.close();
         }
