@@ -39,7 +39,7 @@ const VIEWPORTS = [
   { name: "phone", width: 390, height: 844, deviceScaleFactor: 3, hasTouch: true },
 ];
 
-// UNSET until the instrument exists. When the drum head is on the page, point
+// UNSET until the instrument exists. When the harp is on the page, point
 // this at it and the canvas assertion below starts meaning something. Until
 // then that assertion reports itself as unchecked rather than passing — a
 // check that silently skips its own subject is the failure this whole file is
@@ -50,11 +50,11 @@ const CANVAS_SELECTOR: string | null = '[data-testid="harp"]';
 // only a finger can answer. In assignment 1 the touch rule sat in CLAUDE.md
 // unimplemented for the entire build and the phone viewport was unplayable,
 // while fifty tests looked elsewhere. This is the sensor that would have said
-// so: tap the drum head, and the strike counter in the state mirror has to
+// so: tap a string, and the pluck counter in the state mirror has to
 // move. It cannot hear the sound — nothing automated can — but it can prove
 // that a finger reaches the thing that makes it.
 const TOUCH_TARGET = '[data-testid="harp"]';
-const TOUCH_STATE = '[data-testid="drum-state"]';
+const TOUCH_STATE = '[data-testid="harp-state"]';
 
 
 function htmlFiles(dir: string = DIST): string[] {
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
           // buffer left over from before a resize looks like.
           if (CANVAS_SELECTOR === null) {
             unchecked++;
-            console.log(`· ${label}: canvas buffer UNCHECKED — set CANVAS_SELECTOR once the drum head exists`);
+            console.log(`· ${label}: canvas buffer UNCHECKED — set CANVAS_SELECTOR once the harp exists`);
           } else {
             const m = await page.evaluate((sel) => {
               const canvas = document.querySelector<HTMLCanvasElement>(sel);
@@ -259,15 +259,19 @@ async function main(): Promise<void> {
           //    eleven notes sounds like a rake on a fence. Playing it by hand
           //    is how this was noticed; this is the assertion that keeps it
           //    noticed.
-          {
+          if (CANVAS_SELECTOR) {
             const box = await page.locator(CANVAS_SELECTOR).boundingBox();
             if (!box) {
               console.error(`✗ ${label}: no canvas to sweep across`);
               failed = true;
             } else {
-              await page.locator(TOUCH_STATE).evaluate((el) => {
-                (el as HTMLElement).dataset.plucks = "0";
-              });
+              // The page owns the counter, so zeroing the attribute is a lie
+              // the next pluck overwrites — measure the delta instead. The
+              // phone has already tapped once by this point, and that stray
+              // note read as a re-pluck for one confusing round.
+              const before = Number(
+                (await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1",
+              );
               const y = box.y + box.height * 0.5;
               await page.mouse.move(box.x + 1, y);
               await page.mouse.down();
@@ -279,9 +283,8 @@ async function main(): Promise<void> {
                 await page.mouse.move(box.x + 1 + t * (box.width - 2) + wobble, y);
               }
               await page.mouse.up();
-              const notes = Number(
-                (await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1",
-              );
+              const notes =
+                Number((await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1") - before;
               if (notes !== STRING_COUNT) {
                 console.error(
                   `✗ ${label}: one sweep across ${STRING_COUNT} strings played ${notes} notes — ` +

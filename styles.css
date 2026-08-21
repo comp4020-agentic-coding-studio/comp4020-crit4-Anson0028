@@ -52,7 +52,7 @@ h1 {
   color: var(--dim);
 }
 
-#drum {
+#harp {
   display: flex;
   flex-direction: column;
   align-items: center;

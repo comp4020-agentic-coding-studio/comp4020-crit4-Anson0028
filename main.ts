@@ -5,7 +5,7 @@ import { NODES, brightness, evenEnergy, shapeAt } from "./string";
 import { BOTTOM, STRINGS, TOP, nearestString, pluckPosition, stringsCrossed, type HarpString } from "./harp";
 import { createHarp, type Harp } from "./voice";
 
-const mount = document.querySelector<HTMLElement>("#drum");
+const mount = document.querySelector<HTMLElement>("#harp");
 
 if (mount) {
   const canvas = document.createElement("canvas");
@@ -25,7 +25,7 @@ if (mount) {
   mount.append(hint);
 
   const mirror = document.createElement("div");
-  mirror.dataset.testid = "drum-state";
+  mirror.dataset.testid = "harp-state";
   mirror.hidden = true;
   mirror.dataset.plucks = "0";
   mount.append(mirror);
@@ -75,7 +75,15 @@ if (mount) {
     mirror.dataset.lastEvenEnergy = evenEnergy(position).toFixed(4);
   }
 
-  const hands = new Map<number, { x: number; y: number }>();
+  type Hand = { x: number; y: number; locked: { index: number; x: number } | null };
+  const hands = new Map<number, Hand>();
+
+  // A finger crossing a string deflects it and lets it go. Wobble inside that
+  // deflection does not release it a second time — physically the string is
+  // already moving, and musically eighty-five notes in one sweep is a rake on
+  // a fence. So a string that just sounded stays locked until the hand is
+  // clearly past it: about half the gap to its neighbour.
+  const RELEASE = 0.04;
 
   function local(e: PointerEvent): { x: number; y: number } {
     const rect = canvas.getBoundingClientRect();
@@ -87,8 +95,8 @@ if (mount) {
     canvas.focus();
     canvas.setPointerCapture(e.pointerId);
     const at = local(e);
-    hands.set(e.pointerId, at);
     const string = nearestString(at.x);
+    hands.set(e.pointerId, { ...at, locked: string ? { index: string.index, x: string.x } : null });
     if (string) pluck(string, pluckPosition(at.y), e.pointerType === "mouse" ? 1 : Math.max(0.4, e.pressure * 1.6 || 0.9));
   });
 
@@ -96,11 +104,17 @@ if (mount) {
     const previous = hands.get(e.pointerId);
     if (!previous) return;
     const at = local(e);
+    let locked = previous.locked;
+    if (locked && Math.abs(at.x - locked.x) > RELEASE) locked = null;
     // Every string the hand crossed, in the order it crossed them — a drag is
     // a glissando, which is the whole reason this instrument works where three
     // drums did not.
-    for (const string of stringsCrossed(previous.x, at.x)) pluck(string, pluckPosition(at.y), 0.85);
-    hands.set(e.pointerId, at);
+    for (const string of stringsCrossed(previous.x, at.x)) {
+      if (locked && string.index === locked.index) continue;
+      pluck(string, pluckPosition(at.y), 0.85);
+      locked = { index: string.index, x: string.x };
+    }
+    hands.set(e.pointerId, { ...at, locked });
   });
 
   function lift(e: PointerEvent): void {
