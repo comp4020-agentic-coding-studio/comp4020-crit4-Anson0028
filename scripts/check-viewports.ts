@@ -296,6 +296,47 @@ async function main(): Promise<void> {
               }
             }
           }
+
+          // 8. A demo is only a demo if it can be interrupted. The page says
+          //    "take the strings back by touching them", and a page that says
+          //    that and then plays on over the top of you is worse than one
+          //    with no demos at all.
+          {
+            const button = page.locator("[data-piece]").first();
+            const before = Number(
+              (await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1",
+            );
+            await button.click();
+            await page.waitForTimeout(900);
+            const playing = Number(
+              (await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1",
+            );
+            if (!(playing > before)) {
+              console.error(`✗ ${label}: pressing "${await button.locator("strong").innerText()}" played nothing`);
+              reportErrors();
+              failed = true;
+            } else {
+              const box = await page.locator(CANVAS_SELECTOR!).boundingBox();
+              if (box) await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.5);
+              const atInterrupt = Number(
+                (await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1",
+              );
+              await page.waitForTimeout(900);
+              const after = Number(
+                (await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1",
+              );
+              const stillPlaying = (await page.locator(TOUCH_STATE).getAttribute("data-playing")) ?? "";
+              if (after !== atInterrupt || stillPlaying !== "") {
+                console.error(
+                  `✗ ${label}: the piece kept playing after a hand touched the strings ` +
+                    `(${atInterrupt} -> ${after} notes, data-playing "${stillPlaying}")`,
+                );
+                failed = true;
+              } else {
+                console.log(`✓ ${label}: a demo plays, and touching a string takes the harp back`);
+              }
+            }
+          }
         } finally {
           await page.close();
         }
