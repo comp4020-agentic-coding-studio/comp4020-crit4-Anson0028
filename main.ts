@@ -1,7 +1,7 @@
 // The harp you can see and play. The physics lives in ./string (pure), the
 // layout in ./harp (pure), the sound in ./voice; this file is the drawing,
 // the input, and nothing else.
-import { NODES, brightness, evenEnergy, shapeAt } from "./string";
+import { NODES, boardProximity, evenEnergy, overtoneRatio, shapeAt } from "./string";
 import { BOTTOM, STRINGS, TOP, nearestString, pluckPosition, stringsCrossed, type HarpString } from "./harp";
 import { createHarp, type Harp } from "./voice";
 
@@ -21,7 +21,7 @@ if (mount) {
   const hint = document.createElement("p");
   hint.className = "hint";
   hint.dataset.testid = "hint";
-  hint.textContent = "Drag across the strings.  ·  pluck near the middle for a hollow note, near an end for a bright one";
+  hint.textContent = "Drag across the strings.  ·  the middle of a string is hollow, the ends are bright, and the end by the soundboard is brightest";
   mount.append(hint);
 
   const mirror = document.createElement("div");
@@ -160,8 +160,15 @@ if (mount) {
     ctx.quadraticCurveTo(cssWidth * 0.5, top - 14, cssWidth * 0.02, top + 2);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = "#3a2717";
-    ctx.fillRect(0, bottom, cssWidth, cssHeight - bottom);
+    // The soundboard, and the reason the bottom of a string is not the top of
+    // it: energy leaves here, so a pluck near the board is brighter, louder
+    // and shorter. It is drawn solid, and the neck above is drawn thin, so the
+    // asymmetry you can hear is one you can see.
+    const board = ctx.createLinearGradient(0, bottom - 6, 0, cssHeight);
+    board.addColorStop(0, "#6b4a2c");
+    board.addColorStop(1, "#2c1d11");
+    ctx.fillStyle = board;
+    ctx.fillRect(0, bottom - 6, cssWidth, cssHeight - bottom + 6);
 
     for (const string of STRINGS) {
       const x = string.x * cssWidth;
@@ -174,7 +181,9 @@ if (mount) {
         // rather than described.
         const shape = shapeAt(live.position, (now - live.born) / 1000 * 18, 48);
         const swing = 13 * (1 - age) * live.force * (0.5 + string.index / STRINGS.length);
-        const bright = Math.min(1, Math.max(0, (brightness(live.position) - 1.6) / 1.5));
+        // Overtone-against-fundamental, the same number the ear is following,
+        // mapped straight to colour rather than a guessed range.
+        const bright = Math.min(1, overtoneRatio(live.position) / 2.4);
         ctx.strokeStyle = `hsl(${44 - bright * 16} ${45 + bright * 40}% ${68 + bright * 22}%)`;
         ctx.lineWidth = 2.2;
         ctx.beginPath();
@@ -198,8 +207,9 @@ if (mount) {
       // The nodes, faint. A sound that changes character at a specific place
       // is only playable if the place can be found — this is the only marking
       // on the instrument, and the only hint that position means anything.
-      ctx.fillStyle = "rgb(255 245 220 / 16%)";
+      // Warmer nearer the soundboard: the same gradient the sound has.
       for (const node of NODES) {
+        ctx.fillStyle = `rgb(255 245 220 / ${(10 + boardProximity(node) * 14).toFixed(0)}%)`;
         const py = top + (bottom - top) * node;
         ctx.beginPath();
         ctx.arc(x, py, node === 0.5 ? 2.2 : 1.4, 0, Math.PI * 2);

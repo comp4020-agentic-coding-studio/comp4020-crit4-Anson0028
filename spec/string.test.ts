@@ -36,9 +36,17 @@ describe("pluck position is the formula, not an approximation of it", () => {
   });
 
   it("weights low harmonics far above high ones, as a corner in a string does", () => {
+    // This used to read `partials[0].amplitude === 1`, which was not a fact
+    // about strings but about my normalisation: dividing by the loudest
+    // partial pins the fundamental at full scale wherever you pluck, and so
+    // erases the loudness difference between the middle and the end. Energy
+    // normalisation keeps that difference, and the real claim survives — the
+    // fundamental is still the loudest thing in the note, and the top of the
+    // stack is far below it.
     const partials = partialsFor(220, 0.12);
-    expect(partials[0].amplitude).toBe(1);
-    expect(partials[partials.length - 1].amplitude).toBeLessThan(0.2);
+    const loudest = Math.max(...partials.map((q) => q.amplitude));
+    expect(partials[0].amplitude).toBe(loudest);
+    expect(partials[partials.length - 1].amplitude).toBeLessThan(partials[0].amplitude * 0.2);
   });
 
   it("never asks for a partial above hearing", () => {
