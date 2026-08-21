@@ -19,11 +19,13 @@
 //
 // Deliberately outside `pnpm check`: a browser launch is slower than the rest
 // of the roster and needs `pnpm exec playwright install chromium` once.
+import { STRING_COUNT } from "../harp.ts";
 import { existsSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 import { preview } from "vite";
+
 
 const DIST = resolve("dist");
 
@@ -42,7 +44,7 @@ const VIEWPORTS = [
 // then that assertion reports itself as unchecked rather than passing — a
 // check that silently skips its own subject is the failure this whole file is
 // about.
-const CANVAS_SELECTOR: string | null = '[data-testid="drum-head"]';
+const CANVAS_SELECTOR: string | null = '[data-testid="harp"]';
 
 // The phone has no keyboard, so "can this be played at all here" is a question
 // only a finger can answer. In assignment 1 the touch rule sat in CLAUDE.md
@@ -51,8 +53,9 @@ const CANVAS_SELECTOR: string | null = '[data-testid="drum-head"]';
 // so: tap the drum head, and the strike counter in the state mirror has to
 // move. It cannot hear the sound — nothing automated can — but it can prove
 // that a finger reaches the thing that makes it.
-const TOUCH_TARGET = '[data-testid="drum-head"]';
+const TOUCH_TARGET = '[data-testid="harp"]';
 const TOUCH_STATE = '[data-testid="drum-state"]';
+
 
 function htmlFiles(dir: string = DIST): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -235,18 +238,60 @@ async function main(): Promise<void> {
               continue;
             }
             const before = Number(
-              (await page.locator(TOUCH_STATE).getAttribute("data-strikes")) ?? "-1",
+              (await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1",
             );
-            await page.touchscreen.tap(head.x + head.width * 0.7, head.y + head.height / 2);
+            await page.touchscreen.tap(head.x + head.width * 0.5, head.y + head.height * 0.5);
             await page.waitForTimeout(120);
-            const after = Number((await page.locator(TOUCH_STATE).getAttribute("data-strikes")) ?? "-1");
+            const after = Number((await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1");
             if (!(after > before)) {
-              console.error(`✗ ${label}: a tap on the drum head struck nothing (${before} -> ${after})`);
+              console.error(`✗ ${label}: a tap on the strings plucked nothing (${before} -> ${after})`);
               reportErrors();
               failed = true;
               continue;
             }
-            console.log(`✓ ${label}: a finger can strike the drum`);
+            console.log(`✓ ${label}: a finger can pluck a string`);
+          }
+
+          // 7. A sweep is a glissando, and a glissando is a run of notes — one
+          //    per string. If the hand wobbles across a boundary the naive
+          //    "every string between the last point and this one" fires the
+          //    same string again and again, and a drag that should sound like
+          //    eleven notes sounds like a rake on a fence. Playing it by hand
+          //    is how this was noticed; this is the assertion that keeps it
+          //    noticed.
+          {
+            const box = await page.locator(CANVAS_SELECTOR).boundingBox();
+            if (!box) {
+              console.error(`✗ ${label}: no canvas to sweep across`);
+              failed = true;
+            } else {
+              await page.locator(TOUCH_STATE).evaluate((el) => {
+                (el as HTMLElement).dataset.plucks = "0";
+              });
+              const y = box.y + box.height * 0.5;
+              await page.mouse.move(box.x + 1, y);
+              await page.mouse.down();
+              // Deliberately jittery: a real hand does not travel in a straight
+              // line, and the jitter is the thing that breaks it.
+              for (let i = 1; i <= 120; i++) {
+                const t = i / 120;
+                const wobble = Math.sin(i * 1.7) * box.width * 0.006;
+                await page.mouse.move(box.x + 1 + t * (box.width - 2) + wobble, y);
+              }
+              await page.mouse.up();
+              const notes = Number(
+                (await page.locator(TOUCH_STATE).getAttribute("data-plucks")) ?? "-1",
+              );
+              if (notes !== STRING_COUNT) {
+                console.error(
+                  `✗ ${label}: one sweep across ${STRING_COUNT} strings played ${notes} notes — ` +
+                    `a wobbling hand is re-plucking strings it never left`,
+                );
+                failed = true;
+              } else {
+                console.log(`✓ ${label}: a sweep plays each of the ${STRING_COUNT} strings exactly once`);
+              }
+            }
           }
         } finally {
           await page.close();
