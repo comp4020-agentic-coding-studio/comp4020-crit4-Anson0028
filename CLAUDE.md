@@ -155,6 +155,50 @@ sees one commit doing two jobs and cannot tell which part was the insight.
 Prefix the subject with the area — `main:`, `styles.css:`, `spec:`,
 `CLAUDE.md:`, `scripts:` — so a scan of the log reads as a sequence of moves.
 
+## This week's instrument: a harp, and where the string is plucked
+
+Strings tuned to a pentatonic scale, seen flat on. Clicking different strings
+gives different pitches; clicking the same string in different places gives
+different sounds. The second half is the instrument.
+
+### Pluck position is a formula, not a filter
+
+An ideal string plucked at position `p` along its length gives harmonic `n` an
+amplitude proportional to `sin(nπp) / n²`. That is not an approximation of the
+timbre, it is the timbre: pluck at the midpoint and every even harmonic
+vanishes, because `sin(nπ/2)` is zero for even `n`, leaving something hollow
+and clarinet-like. Pluck at a third and the third harmonic disappears. Pluck
+near the end and everything is present at once, which is the bright, nasal
+sound of playing by the bridge.
+
+**This must be derived, never faked with a lowpass sweep.** Another student's
+harp this week does it with a filter cutoff and says so in its own comment — "a
+rough stand-in for real pluck-position timbre" — and its whole brightness range
+is a factor of about two. A factor of two in spectral centre is the same order
+as the drum I rejected by ear as too subtle earlier this week. The formula
+gives discontinuities instead of a slope, and discontinuities are what an ear
+notices.
+
+The nodes at 1/2, 1/3 and 1/4 are marked faintly on each string, because a
+sound that changes character at a specific spot is only expressive if the spot
+can be found.
+
+### A drag across the strings is a glissando
+
+The reason a harp works here and three drums did not: a plucked string rings
+for seconds, so one drag across eight strings is eight overlapping notes and
+sounds like music. A struck drum is silent again immediately, which is why one
+pointer at human speed could never make anything out of it. Dragging must
+therefore pluck every string it crosses, not just the one where the press
+began.
+
+### The string draws what it is doing
+
+A string plucked at `p` vibrates with a node at `p`. Drawing that shape is not
+decoration — it is the same fact as the harmonic content, shown rather than
+described, and it is how a player discovers that position matters without
+being told.
+
 ## The instrument sounds only while it is being played
 
 Silence until the first press. Sound for exactly as long as a press is held.
