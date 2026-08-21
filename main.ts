@@ -22,7 +22,7 @@ if (mount) {
   const hint = document.createElement("p");
   hint.className = "hint";
   hint.dataset.testid = "hint";
-  hint.textContent = "Drag across the strings.  ·  the middle of a string is hollow, the ends are bright, and the end by the soundboard is brightest";
+  hint.textContent = "Eleven strings, no wrong notes.";
   mount.append(hint);
 
   const mirror = document.createElement("div");
@@ -59,6 +59,14 @@ if (mount) {
   });
   mount.append(demos);
 
+  let focused = false;
+  canvas.addEventListener("focus", () => {
+    focused = true;
+  });
+  canvas.addEventListener("blur", () => {
+    focused = false;
+  });
+
   const ctx = canvas.getContext("2d");
   let cssWidth = 0;
   let cssHeight = 0;
@@ -74,6 +82,14 @@ if (mount) {
     ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   window.addEventListener("resize", resize);
+
+  // The brief asks for something "playable without instructions on first
+  // encounter", and the crit begins with the pod playing it before I am
+  // allowed to say a word. So the invitation has to be in the instrument: the
+  // strings breathe, and a highlight walks across them, until the first time
+  // anyone touches one. Silently — nothing here makes a sound unasked.
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let touched = false;
 
   type Ringing = { string: HarpString; position: number; born: number; force: number };
   const ringing = new Map<number, Ringing>();
@@ -104,13 +120,15 @@ if (mount) {
     if (eventTime !== undefined) reportLatency(audio, scheduledAt, eventTime, lead);
     ringing.set(string.index, { string, position, born: performance.now() + lead * 1000, force });
     plucks++;
+    touched = true;
+    mirror.dataset.idleMotion = "off";
     mirror.dataset.plucks = String(plucks);
     mirror.dataset.lastString = String(string.index);
     mirror.dataset.lastPosition = position.toFixed(4);
     mirror.dataset.lastEvenEnergy = evenEnergy(position).toFixed(4);
   }
 
-  type Hand = { x: number; y: number; locked: { index: number; x: number } | null };
+  type Hand = { x: number; y: number; at: number; locked: { index: number; x: number } | null };
   // The whole gap the page can see, in milliseconds: from the pointer event's
   // own timestamp to the code that handled it, plus the lead the note was
   // scheduled with, plus the output latency the AudioContext admits to. The
@@ -128,6 +146,14 @@ if (mount) {
   }
 
   const hands = new Map<number, Hand>();
+
+  // How hard a string is plucked, from how fast the hand crossed it. A mouse
+  // has no pressure sensor, so without this every mouse pluck is identical
+  // and the instrument has one gesture where a real one has two: which string,
+  // and how you got there.
+  function forceFromSpeed(fractionPerSecond: number): number {
+    return Math.min(1, Math.max(0.45, 0.5 + fractionPerSecond * 0.28));
+  }
 
   // A written piece is handed to the audio clock a fraction of a second at a
   // time: sample-accurate where it matters, and still interruptible, because
@@ -189,7 +215,7 @@ if (mount) {
     canvas.setPointerCapture(e.pointerId);
     const at = local(e);
     const string = nearestString(at.x);
-    hands.set(e.pointerId, { ...at, locked: string ? { index: string.index, x: string.x } : null });
+    hands.set(e.pointerId, { ...at, at: e.timeStamp, locked: string ? { index: string.index, x: string.x } : null });
     if (string) {
       const force = e.pointerType === "mouse" ? 1 : Math.max(0.4, e.pressure * 1.6 || 0.9);
       pluck(string, pluckPosition(at.y), force, 0, e.timeStamp);
@@ -200,6 +226,8 @@ if (mount) {
     const previous = hands.get(e.pointerId);
     if (!previous) return;
     const at = local(e);
+    const dt = Math.max(1, e.timeStamp - previous.at);
+    const speed = (Math.abs(at.x - previous.x) / dt) * 1000;
     let locked = previous.locked;
     if (locked && Math.abs(at.x - locked.x) > RELEASE) locked = null;
     // Every string the hand crossed, in the order it crossed them — a drag is
@@ -207,10 +235,10 @@ if (mount) {
     // drums did not.
     for (const string of stringsCrossed(previous.x, at.x)) {
       if (locked && string.index === locked.index) continue;
-      pluck(string, pluckPosition(at.y), 0.85);
+      pluck(string, pluckPosition(at.y), forceFromSpeed(speed), 0, e.timeStamp);
       locked = { index: string.index, x: string.x };
     }
-    hands.set(e.pointerId, { ...at, locked });
+    hands.set(e.pointerId, { ...at, at: e.timeStamp, locked });
   });
 
   function lift(e: PointerEvent): void {
@@ -297,12 +325,29 @@ if (mount) {
         }
         ctx.stroke();
       } else {
-        ctx.strokeStyle = "#9d8a6d";
-        ctx.lineWidth = 1.4;
+        // At rest — unless nobody has touched it yet, in which case the string
+        // breathes, and a highlight walks left to right so the eye is told
+        // where the instrument is before any text gets a chance to.
+        const invite = touched || reducedMotion.matches ? 0 : 1;
+        const phase = (now / 1600 - string.index * 0.09) % 1;
+        const glow = invite * Math.max(0, 1 - Math.abs(phase - 0.5) * 5);
+        const breath = invite * Math.sin(now / 900 + string.index) * 1.1;
+        ctx.strokeStyle = `hsl(42 ${28 + glow * 45}% ${58 + glow * 30}%)`;
+        ctx.lineWidth = 1.4 + glow * 1.1;
         ctx.beginPath();
         ctx.moveTo(x, top);
-        ctx.lineTo(x, bottom);
+        ctx.quadraticCurveTo(x + breath, (top + bottom) / 2, x, bottom);
         ctx.stroke();
+      }
+
+      // The keys, but only once the harp has keyboard focus — a row of letters
+      // on an untouched instrument is a manual, and a keyboard player who has
+      // just tabbed here has no other way to find out the strings answer.
+      if (focused && string.key) {
+        ctx.fillStyle = "rgb(255 245 220 / 55%)";
+        ctx.font = "600 12px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(string.key.toUpperCase(), x, top - 12);
       }
 
       // The nodes, faint. A sound that changes character at a specific place
@@ -325,6 +370,7 @@ if (mount) {
     requestAnimationFrame(render);
   }
 
+  mirror.dataset.idleMotion = reducedMotion.matches ? "off" : "on";
   resize();
   requestAnimationFrame(render);
 }
