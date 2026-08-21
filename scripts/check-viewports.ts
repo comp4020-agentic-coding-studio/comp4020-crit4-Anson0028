@@ -37,6 +37,9 @@ const DIST = resolve("dist");
 const VIEWPORTS = [
   { name: "desktop", width: 1920, height: 1080, deviceScaleFactor: 1, hasTouch: false },
   { name: "phone", width: 390, height: 844, deviceScaleFactor: 3, hasTouch: true },
+  // Not a marking viewport: a laptop window, because 1080 is a screen and a
+  // browser's own furniture comes out of it before the page sees a pixel.
+  { name: "laptop", width: 1280, height: 800, deviceScaleFactor: 2, hasTouch: false },
 ];
 
 // UNSET until the instrument exists. When the harp is on the page, point
@@ -434,6 +437,38 @@ async function main(): Promise<void> {
               } else {
                 console.log(`✓ ${label}: a resize mid-interaction leaves the harp playable and in register`);
               }
+            }
+          }
+
+          // 11. The whole harp has to be on screen without scrolling, and tall
+          //     enough to play. Both are about the one control this instrument
+          //     has: where along a string you pluck. A harp you have to scroll
+          //     to see is a harp whose ends you cannot reach without losing
+          //     sight of it, and a 240-pixel string has nowhere to put the
+          //     difference between hollow and bright.
+          //
+          //     The marking viewports are 1920×1080 and 390×844, but 1080 is a
+          //     screen and not a window — Chrome's own furniture comes out of
+          //     it — so a laptop-sized 1280×800 is checked as well.
+          {
+            const fits = await page.evaluate(() => {
+              const c = document.querySelector('[data-testid="harp"]')!.getBoundingClientRect();
+              return { top: c.top, bottom: c.bottom, height: c.height, viewport: window.innerHeight };
+            });
+            if (fits.bottom > fits.viewport) {
+              console.error(
+                `✗ ${label}: the harp runs ${(fits.bottom - fits.viewport).toFixed(0)}px past the bottom of the ` +
+                  `viewport — you have to scroll to see the instrument`,
+              );
+              failed = true;
+            } else if (fits.height < 280) {
+              console.error(
+                `✗ ${label}: the strings are only ${fits.height.toFixed(0)}px long — not enough room to pluck ` +
+                  `one in two places and hear the difference`,
+              );
+              failed = true;
+            } else {
+              console.log(`✓ ${label}: the whole harp is on screen, ${fits.height.toFixed(0)}px of string to play`);
             }
           }
         } finally {
