@@ -8,14 +8,19 @@ import type { HarpString } from "./harp";
 // wakes", which is audible as a click on the attack; a few milliseconds is
 // inaudible as latency and gives the envelope somewhere to start. The
 // pointer-to-sound gap is measured, not assumed — see CLAUDE.md.
-const SCHEDULE_AHEAD_S = 0.004;
+const SCHEDULE_AHEAD_S = 0.0015;
 const ATTACK_S = 0.004;
 
 export type Harp = {
   /** `lead` schedules the pluck that many seconds ahead, so a written piece
    *  can be handed to the audio clock in one go instead of being chased with
    *  timers. setTimeout is not a musical instrument. */
-  pluck(string: HarpString, position: number, force?: number, lead?: number): void;
+  pluck(string: HarpString, position: number, force?: number, lead?: number): number;
+
+  /** What the browser will admit to between a scheduled time and a speaker
+   *  moving. Not the whole story — the OS and the hardware add their own —
+   *  but it is the part that can be read rather than guessed. */
+  readonly outputLatencyS: number;
   /** A palm on the strings. Everything ringing stops, quickly but not abruptly. */
   damp(): void;
   readonly context: AudioContext;
@@ -65,9 +70,13 @@ export function createHarp(context: AudioContext, destination: AudioNode = conte
       for (const gains of ringing.values()) stop(gains, now, 0.12);
       ringing.clear();
     },
+    get outputLatencyS() {
+      const c = context as AudioContext & { outputLatency?: number };
+      return c.outputLatency || c.baseLatency || 0;
+    },
     pluck(string, position, force = 1, lead = 0) {
       const partials = partialsFor(string.frequency, position, force);
-      if (partials.length === 0) return;
+      if (partials.length === 0) return context.currentTime;
       const t0 = context.currentTime + SCHEDULE_AHEAD_S + Math.max(0, lead);
 
       // A real string can only be in one state at a time. Without this, a fast
@@ -116,6 +125,10 @@ export function createHarp(context: AudioContext, destination: AudioNode = conte
         nail.disconnect();
         nailEnv.disconnect();
       };
+
+      // Handed back so the page can measure the gap between the hand and the
+      // sound instead of assuming it.
+      return t0;
     },
   };
 }

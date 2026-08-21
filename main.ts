@@ -88,14 +88,20 @@ if (mount) {
     if (!harp) {
       const Ctor =
         window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      harp = createHarp(new Ctor());
+      // "interactive" asks for the smallest buffer the device will give. The
+      // default is "balanced", and on this machine that default was 24 ms of
+      // output latency on its own — most of a plucked attack's entire budget,
+      // spent before the page has done anything.
+      harp = createHarp(new Ctor({ latencyHint: "interactive" }));
     }
     if (harp.context.state === "suspended") void harp.context.resume();
     return harp;
   }
 
-  function pluck(string: HarpString, position: number, force = 1, lead = 0): void {
-    ensureAudio().pluck(string, position, force, lead);
+  function pluck(string: HarpString, position: number, force = 1, lead = 0, eventTime?: number): void {
+    const audio = ensureAudio();
+    const scheduledAt = audio.pluck(string, position, force, lead);
+    if (eventTime !== undefined) reportLatency(audio, scheduledAt, eventTime, lead);
     ringing.set(string.index, { string, position, born: performance.now() + lead * 1000, force });
     plucks++;
     mirror.dataset.plucks = String(plucks);
@@ -105,6 +111,21 @@ if (mount) {
   }
 
   type Hand = { x: number; y: number; locked: { index: number; x: number } | null };
+  // The whole gap the page can see, in milliseconds: from the pointer event's
+  // own timestamp to the code that handled it, plus the lead the note was
+  // scheduled with, plus the output latency the AudioContext admits to. The
+  // OS and the hardware add more that no page can read, so this is a floor
+  // and is reported as one.
+  function reportLatency(audio: Harp, scheduledAt: number, eventTime: number, lead: number): void {
+    const handling = Math.max(0, performance.now() - eventTime);
+    const scheduling = Math.max(0, (scheduledAt - audio.context.currentTime - lead) * 1000);
+    const output = audio.outputLatencyS * 1000;
+    const total = handling + scheduling + output;
+    mirror.dataset.latencyMs = total.toFixed(2);
+    mirror.dataset.latencyParts =
+      `handling ${handling.toFixed(1)} + scheduling ${scheduling.toFixed(1)} + output ${output.toFixed(1)} ms`;
+  }
+
   const hands = new Map<number, Hand>();
 
   // A written piece is handed to the audio clock a fraction of a second at a
@@ -168,7 +189,10 @@ if (mount) {
     const at = local(e);
     const string = nearestString(at.x);
     hands.set(e.pointerId, { ...at, locked: string ? { index: string.index, x: string.x } : null });
-    if (string) pluck(string, pluckPosition(at.y), e.pointerType === "mouse" ? 1 : Math.max(0.4, e.pressure * 1.6 || 0.9));
+    if (string) {
+      const force = e.pointerType === "mouse" ? 1 : Math.max(0.4, e.pressure * 1.6 || 0.9);
+      pluck(string, pluckPosition(at.y), force, 0, e.timeStamp);
+    }
   });
 
   canvas.addEventListener("pointermove", (e) => {
