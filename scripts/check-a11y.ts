@@ -66,6 +66,7 @@ async function main(): Promise<void> {
         failed = (await checkTouchTargets(page)) || failed;
       }
       failed = (await checkReducedMotion(page, viewport.name)) || failed;
+      failed = (await checkCanvasMotion(page, viewport.name)) || failed;
 
       await page.close();
     }
@@ -253,6 +254,39 @@ async function checkReducedMotion(page: Page, label: string): Promise<boolean> {
   }
   console.error(`✗ ${label}: prefers-reduced-motion — ${stillAnimating.length} transition(s) still active under reduced motion`);
   for (const f of stillAnimating) console.error(`    ${f}`);
+  return true;
+}
+
+// --- 5. ...and the motion this page actually has is inside a canvas -------
+// The check above walks computed styles, which is the whole vocabulary CSS
+// gives it — and the only moving thing on this page is a canvas, where no
+// computed style has ever been. So it truthfully reported "no transitions
+// defined, nothing to check yet" while eleven strings breathed and a
+// highlight walked across them, which is a sensor looking confidently at the
+// wrong surface: the same shape as the drum's hit test and the [hidden]
+// panels before it.
+//
+// The page publishes whether its idle motion is running, so the claim can be
+// checked at the only place it is true.
+async function checkCanvasMotion(page: Page, label: string): Promise<boolean> {
+  const state = '[data-testid="harp-state"]';
+  const running = await page.locator(state).getAttribute("data-idle-motion");
+  if (running !== "on") {
+    console.error(`✗ ${label}: the harp reports its idle motion as "${running}" before anyone has touched it — nothing to test`);
+    return true;
+  }
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload({ waitUntil: "load" });
+  const underReduce = await page.locator(state).getAttribute("data-idle-motion");
+  await page.emulateMedia({ reducedMotion: null });
+  await page.reload({ waitUntil: "load" });
+
+  if (underReduce === "off") {
+    console.log(`✓ ${label}: prefers-reduced-motion — the canvas's idle motion stops too, not just the CSS`);
+    return false;
+  }
+  console.error(`✗ ${label}: prefers-reduced-motion — the canvas keeps animating ("${underReduce}")`);
   return true;
 }
 
