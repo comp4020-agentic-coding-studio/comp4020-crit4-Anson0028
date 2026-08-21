@@ -337,6 +337,44 @@ async function main(): Promise<void> {
               }
             }
           }
+
+          // 9. The crit for this brief "centers on latency, expressive gesture
+          //    and feel". CLAUDE.md has claimed since the first commit that
+          //    the pointer-to-sound gap is measured rather than assumed, and
+          //    until now nothing measured it — the claim was decoration.
+          //
+          //    The page reports the whole gap it can see: the time from the
+          //    pointer event to the code that handles it, the lead the note is
+          //    scheduled with, and the output latency the AudioContext admits
+          //    to. Under about 30 ms a plucked attack reads as caused by the
+          //    hand; past it the sound arrives as a separate event.
+          {
+            const box = await page.locator(CANVAS_SELECTOR!).boundingBox();
+            if (!box) {
+              console.error(`✗ ${label}: no canvas to measure latency against`);
+              failed = true;
+            } else {
+              let worst = 0;
+              for (let i = 0; i < 5; i++) {
+                await page.mouse.click(box.x + box.width * (0.2 + i * 0.14), box.y + box.height * 0.5);
+                await page.waitForTimeout(60);
+                worst = Math.max(
+                  worst,
+                  Number((await page.locator(TOUCH_STATE).getAttribute("data-latency-ms")) ?? NaN),
+                );
+              }
+              const parts = (await page.locator(TOUCH_STATE).getAttribute("data-latency-parts")) ?? "?";
+              if (!Number.isFinite(worst)) {
+                console.error(`✗ ${label}: the page reports no pointer-to-sound latency at all`);
+                failed = true;
+              } else if (worst > 30) {
+                console.error(`✗ ${label}: pointer to sound took ${worst.toFixed(1)} ms (${parts}) — over the 30 ms an attack can hide in`);
+                failed = true;
+              } else {
+                console.log(`✓ ${label}: pointer to sound ${worst.toFixed(1)} ms, worst of five (${parts})`);
+              }
+            }
+          }
         } finally {
           await page.close();
         }
