@@ -4,6 +4,7 @@
 import { NODES, boardProximity, evenEnergy, overtoneRatio, shapeAt } from "./string";
 import { BOTTOM, STRINGS, TOP, nearestString, pluckPosition, stringsCrossed, type HarpString } from "./harp";
 import { createHarp, type Harp } from "./voice";
+import { PIECES, durationOf, type Piece } from "./pieces";
 
 const mount = document.querySelector<HTMLElement>("#harp");
 
@@ -29,6 +30,34 @@ if (mount) {
   mirror.hidden = true;
   mirror.dataset.plucks = "0";
   mount.append(mirror);
+
+  // Three things to press before you know what the instrument does. They are
+  // buttons and not an autoplay: nothing on this page makes a sound until
+  // somebody asks it to.
+  const demos = document.createElement("div");
+  demos.className = "demos";
+  const demoHeading = document.createElement("p");
+  demoHeading.className = "demos-heading";
+  demoHeading.textContent = "Or hear what it does — then take the strings back by touching them.";
+  demos.append(demoHeading);
+  const buttons: HTMLButtonElement[] = PIECES.map((piece) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.piece = piece.id;
+    button.setAttribute("aria-pressed", "false");
+    const title = document.createElement("strong");
+    title.textContent = piece.title;
+    const about = document.createElement("span");
+    about.textContent = piece.about;
+    button.append(title, about);
+    button.addEventListener("click", () => {
+      if (performance_?.piece.id === piece.id) stopPiece();
+      else startPiece(piece);
+    });
+    demos.append(button);
+    return button;
+  });
+  mount.append(demos);
 
   const ctx = canvas.getContext("2d");
   let cssWidth = 0;
@@ -65,9 +94,9 @@ if (mount) {
     return harp;
   }
 
-  function pluck(string: HarpString, position: number, force = 1): void {
-    ensureAudio().pluck(string, position, force);
-    ringing.set(string.index, { string, position, born: performance.now(), force });
+  function pluck(string: HarpString, position: number, force = 1, lead = 0): void {
+    ensureAudio().pluck(string, position, force, lead);
+    ringing.set(string.index, { string, position, born: performance.now() + lead * 1000, force });
     plucks++;
     mirror.dataset.plucks = String(plucks);
     mirror.dataset.lastString = String(string.index);
@@ -77,6 +106,45 @@ if (mount) {
 
   type Hand = { x: number; y: number; locked: { index: number; x: number } | null };
   const hands = new Map<number, Hand>();
+
+  // A written piece is handed to the audio clock a fraction of a second at a
+  // time: sample-accurate where it matters, and still interruptible, because
+  // the whole point of a demo here is that you can cut it off by playing.
+  const LOOKAHEAD_S = 0.15;
+  let performance_: { piece: Piece; next: number; startedAt: number } | null = null;
+
+  function stopPiece(): void {
+    if (!performance_) return;
+    performance_ = null;
+    for (const button of buttons) button.setAttribute("aria-pressed", "false");
+    mirror.dataset.playing = "";
+  }
+
+  function startPiece(piece: Piece): void {
+    const audio = ensureAudio();
+    stopPiece();
+    audio.damp();
+    ringing.clear();
+    performance_ = { piece, next: 0, startedAt: audio.context.currentTime + 0.2 };
+    mirror.dataset.playing = piece.id;
+    for (const button of buttons) {
+      button.setAttribute("aria-pressed", String(button.dataset.piece === piece.id));
+    }
+  }
+
+  function advancePiece(): void {
+    if (!performance_) return;
+    const { piece, startedAt } = performance_;
+    const now = harp!.context.currentTime;
+    while (performance_.next < piece.notes.length) {
+      const note = piece.notes[performance_.next];
+      const at = startedAt + note.at;
+      if (at > now + LOOKAHEAD_S) break;
+      pluck(STRINGS[note.index], note.position, note.force, Math.max(0, at - now));
+      performance_.next++;
+    }
+    if (performance_.next >= piece.notes.length && now > startedAt + durationOf(piece) + 0.3) stopPiece();
+  }
 
   // A finger crossing a string deflects it and lets it go. Wobble inside that
   // deflection does not release it a second time — physically the string is
@@ -92,6 +160,9 @@ if (mount) {
 
   canvas.addEventListener("pointerdown", (e) => {
     e.preventDefault();
+    // Touching the strings takes them back. A demo that has to be waited out
+    // is a video.
+    stopPiece();
     canvas.focus();
     canvas.setPointerCapture(e.pointerId);
     const at = local(e);
@@ -127,6 +198,7 @@ if (mount) {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === " ") {
       e.preventDefault();
+      stopPiece();
       ensureAudio().damp();
       ringing.clear();
       return;
@@ -134,6 +206,7 @@ if (mount) {
     const string = STRINGS.find((s) => s.key === e.key.toLowerCase());
     if (!string) return;
     e.preventDefault();
+    stopPiece();
     // Shift is the other hand moving up the string: the same note, plucked
     // near the end instead of the middle. The keyboard gets the instrument's
     // one real dimension, not just its notes.
@@ -145,6 +218,7 @@ if (mount) {
       requestAnimationFrame(render);
       return;
     }
+    advancePiece();
     ctx.clearRect(0, 0, cssWidth, cssHeight);
     const top = TOP * cssHeight;
     const bottom = BOTTOM * cssHeight;
@@ -172,7 +246,9 @@ if (mount) {
 
     for (const string of STRINGS) {
       const x = string.x * cssWidth;
-      const live = ringing.get(string.index);
+      const scheduled = ringing.get(string.index);
+      // A note handed to the audio clock ahead of time has not happened yet.
+      const live = scheduled && now >= scheduled.born ? scheduled : undefined;
       const age = live ? (now - live.born) / RING_MS : 1;
 
       if (live && age < 1) {

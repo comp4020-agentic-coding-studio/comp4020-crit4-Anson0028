@@ -77,3 +77,54 @@ canvas[data-testid="harp"]:focus-visible {
   color: var(--dim);
   font-size: 0.85rem;
 }
+
+.demos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.6rem;
+  margin-top: 1.4rem;
+}
+
+.demos-heading {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--dim);
+  font-size: 0.95rem;
+}
+
+.demos button {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  color: inherit;
+  background: rgb(255 245 220 / 5%);
+  border: 1px solid rgb(255 245 220 / 16%);
+  border-radius: 0.5rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.demos button:hover {
+  background: rgb(255 245 220 / 9%);
+}
+
+.demos button[aria-pressed="true"] {
+  background: rgb(214 160 92 / 22%);
+  border-color: rgb(214 160 92 / 60%);
+}
+
+.demos button strong {
+  font-weight: 600;
+}
+
+.demos button span {
+  color: var(--dim);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.demos button:focus-visible {
+  outline: 2px solid var(--accent, #d6a05c);
+  outline-offset: 2px;
+}

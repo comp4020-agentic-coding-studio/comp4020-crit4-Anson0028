@@ -12,7 +12,10 @@ const SCHEDULE_AHEAD_S = 0.004;
 const ATTACK_S = 0.004;
 
 export type Harp = {
-  pluck(string: HarpString, position: number, force?: number): void;
+  /** `lead` schedules the pluck that many seconds ahead, so a written piece
+   *  can be handed to the audio clock in one go instead of being chased with
+   *  timers. setTimeout is not a musical instrument. */
+  pluck(string: HarpString, position: number, force?: number, lead?: number): void;
   /** A palm on the strings. Everything ringing stops, quickly but not abruptly. */
   damp(): void;
   readonly context: AudioContext;
@@ -62,10 +65,10 @@ export function createHarp(context: AudioContext, destination: AudioNode = conte
       for (const gains of ringing.values()) stop(gains, now, 0.12);
       ringing.clear();
     },
-    pluck(string, position, force = 1) {
+    pluck(string, position, force = 1, lead = 0) {
       const partials = partialsFor(string.frequency, position, force);
       if (partials.length === 0) return;
-      const t0 = context.currentTime + SCHEDULE_AHEAD_S;
+      const t0 = context.currentTime + SCHEDULE_AHEAD_S + Math.max(0, lead);
 
       // A real string can only be in one state at a time. Without this, a fast
       // glissando back and forth stacks a dozen copies of the same note and
