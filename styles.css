@@ -35,7 +35,7 @@ body {
 }
 
 main {
-  max-width: 68rem;
+  max-width: 80rem;
   margin: 0 auto;
   padding: 1.25rem 1rem 2rem;
 }
@@ -53,10 +53,40 @@ h1 {
 }
 
 #harp {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  justify-items: center;
   gap: 0.6rem;
+}
+
+/* Wide enough for a column beside the harp: the pieces go there instead of
+   below the fold. Everything on this page should be reachable without
+   scrolling away from the instrument you are being asked to play. */
+@media (min-width: 62rem) {
+  #harp {
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 21rem);
+    grid-template-rows: auto auto;
+    column-gap: 2rem;
+    align-items: start;
+    justify-items: stretch;
+  }
+
+  #harp canvas {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  #harp .hint {
+    grid-column: 1;
+    grid-row: 2;
+    text-align: center;
+  }
+
+  #harp .demos {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin-top: 0;
+    align-content: start;
+  }
 }
 
 canvas[data-testid="harp"] {
@@ -67,11 +97,11 @@ canvas[data-testid="harp"] {
      phone's strings down to 239px — and the length of a string is where this
      instrument keeps its one control. svh rather than vh so a phone's
      retracting toolbar doesn't cut the bottom off. */
-  block-size: clamp(19rem, calc(100svh - 17rem), 32rem);
+  block-size: clamp(19rem, calc(100svh - 17rem), 38rem);
   /* Kept narrower than the column on a wide screen: eleven strings stretched
      across 1056px read as a barcode, and the hand has further to travel than
      the music needs. */
-  max-inline-size: 46rem;
+  max-inline-size: 52rem;
   touch-action: none; /* a strike must not scroll the page out from under it */
   cursor: pointer;
 }
